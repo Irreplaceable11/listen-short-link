@@ -1,8 +1,29 @@
-greeting:
-  message: "hello"
 quarkus:
+  live-reload:
+    instrumentation: true
   quinoa:
+    build-dir: dist
     ui-root-path: "quinoa"
+    package-manager: npm
     package-manager-install:
-      node-version: "20.10.0"
-      "~": true
+      install-dir: D:\NodeJS
+      node-version: 20.19.2
+      npm-version: 11.4.2
+
+  hibernate-orm:
+    physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    log:
+      sql: true
+    database:
+      generation: none
+    validate-in-dev-mode: false
+    sql-load-script: import.sql
+  datasource:
+    username: hanford
+    password: 9632147890aA
+    jdbc:
+      url: jdbc:mysql://113.45.143.70:3306/short_link?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+      driver: com.mysql.cj.jdbc.Driver
+snowflake:
+  worker-id: 1
+  datacenter-id: 1
