@@ -1,0 +1,8 @@
+greeting:
+  message: "hello"
+quarkus:
+  quinoa:
+    ui-root-path: "quinoa"
+    package-manager-install:
+      node-version: "20.10.0"
+      "~": true
