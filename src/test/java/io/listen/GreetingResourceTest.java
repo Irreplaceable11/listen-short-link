@@ -1,5 +1,6 @@
 package io.listen;
 
+import io.listen.generator.ShortCodeGenerator;
 import io.listen.generator.SnowflakeIdGenerator;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -14,9 +15,17 @@ class GreetingResourceTest {
     @Inject
     SnowflakeIdGenerator snowflakeIdGenerator;
 
+    @Inject
+    ShortCodeGenerator shortCodeGenerator;
+
     @Test
     void testId() {
         System.out.println(snowflakeIdGenerator.nextId());
+    }
+
+    @Test
+    void testShortCode() {
+        System.out.println(shortCodeGenerator.generateShortCode());
     }
 
 }

@@ -2,6 +2,7 @@ quarkus:
   live-reload:
     instrumentation: true
   quinoa:
+    dev-server: false
     build-dir: dist
     ui-root-path: "quinoa"
     package-manager: npm
@@ -27,3 +28,16 @@ quarkus:
 snowflake:
   worker-id: 1
   datacenter-id: 1
+smallrye:
+  jwt:
+    sign:
+      key:
+        location: META-INF/resources/private_key.pem
+    encrypt:
+      key:
+        location: META-INF/resources/public_key.pem
+mp:
+  jwt:
+    verify:
+      publickey:
+        location: META-INF/resources/public_key.pem

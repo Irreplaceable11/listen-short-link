@@ -8,7 +8,7 @@ public class ShortCodeGenerator {
 
     private static final String BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final int BASE = BASE62_CHARS.length();
-    private static final int MIN_LENGTH = 6;
+    private static final int MIN_LENGTH = 8;
 
     @Inject
     SnowflakeIdGenerator idGenerator;
@@ -17,8 +17,11 @@ public class ShortCodeGenerator {
      * 生成短码
      */
     public String generateShortCode() {
-        long id = idGenerator.nextId(); // 分布式ID生成
-        return encode(id);
+        // 分布式ID生成
+        long id = idGenerator.nextId();
+        // 使用模运算将 ID 映射到一个较小的范围（例如 62^8 范围内）
+        long smallId = id % (long) Math.pow(BASE, MIN_LENGTH);
+        return encode(smallId);
     }
 
     /**

@@ -1,6 +1,8 @@
 package io.listen.model;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.security.jpa.Password;
+import io.quarkus.security.jpa.Username;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
@@ -12,13 +14,15 @@ import java.time.LocalDateTime;
 public class User extends PanacheEntity {
 
   // 用户名
+  @Username
   public String username;
 
   // 邮箱
   public String email;
 
   // 密码哈希
-  public String passwordHash;
+  @Password
+  public String password;
 
   // API密钥
   public String apiKey;
