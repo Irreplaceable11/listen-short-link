@@ -1,15 +1,16 @@
 quarkus:
   live-reload:
     instrumentation: true
-  quinoa:
-    dev-server: false
-    build-dir: dist
-    ui-root-path: "quinoa"
-    package-manager: npm
-    package-manager-install:
-      install-dir: D:\NodeJS
-      node-version: 20.19.2
-      npm-version: 11.4.2
+
+#  quinoa:
+#    dev-server: false
+#    build-dir: dist
+#    ui-root-path: "quinoa"
+#    package-manager: npm
+#    package-manager-install:
+#      install-dir: D:\NodeJS
+#      node-version: 20.19.2
+#      npm-version: 11.4.2
 
   hibernate-orm:
     physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
