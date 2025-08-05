@@ -1,17 +1,23 @@
 package io.listen.model;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.quarkus.security.jpa.Password;
+import io.quarkus.security.jpa.Roles;
+import io.quarkus.security.jpa.UserDefinition;
 import io.quarkus.security.jpa.Username;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-public class User extends PanacheEntity {
+@UserDefinition
+public class User extends PanacheEntityBase {
+
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  public Long id;
 
   // 用户名
   @Username
@@ -24,13 +30,18 @@ public class User extends PanacheEntity {
   @Password
   public String password;
 
+  @Roles
+  public String role;
+
   // API密钥
   public String apiKey;
 
   // 每日配额，默认1000
+  //限制用户每天可以创建的短链数量
   public Integer quotaDaily;
 
   // 今日已用配额，默认0
+  // 记录用户当天已经使用的配额数量
   public Integer quotaUsedToday;
 
   // 配额重置日期
