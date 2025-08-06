@@ -7,6 +7,8 @@ import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.CityResponse;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.vertx.core.http.HttpServerRequest;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -16,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -31,14 +32,17 @@ public class ClientInfoUtils {
 
     @PostConstruct
     public void init() {
-        try {
-            String dbFileName = "GeoLite2-City.mmdb";
-            parser = DeviceDetectorParser.getClient();
-            dbReader = new DatabaseReader.Builder(new File(getClass().getClassLoader().getResource(dbFileName).toURI())).build();
-        } catch (IOException | URISyntaxException e) {
-            Log.error(e.getMessage(), e);
-        }
-
+        Uni.createFrom().<Void>item(() -> {
+            try {
+                String dbFileName = "GeoLite2-City.mmdb";
+                parser = DeviceDetectorParser.getClient();
+                dbReader = new DatabaseReader.Builder(new File(getClass().getClassLoader().getResource(dbFileName).toURI())).build();
+            } catch (IOException | URISyntaxException e) {
+                Log.error(e.getMessage(), e);
+            }
+            return null;
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+          .subscribe().with(success -> {});
     }
 
     @PreDestroy
@@ -49,7 +53,6 @@ public class ClientInfoUtils {
             throw new RuntimeException(e);
         }
     }
-
 
 
     public String getClientIpAddress(HttpServerRequest request) {
@@ -74,6 +77,9 @@ public class ClientInfoUtils {
     public Map<String, String> getIpInfo(String ip) {
         InetAddress inetAddress = null;
         Map<String, String> map = new HashMap<>();
+        if ("127.0.0.1".equals(ip)) {
+            return map;
+        }
         try {
             inetAddress = InetAddress.getByName(ip);
             CityResponse response = dbReader.city(inetAddress);
@@ -85,16 +91,16 @@ public class ClientInfoUtils {
         return map;
     }
 
-   public Map<String, String> getClientInfo(String userAgent) {
-       Map<String, String>  map = new HashMap<>();
-       DeviceDetectorResult result = parser.parse(userAgent);
-       Map<String, String> resultMap = result.toMap();
-       //设备类型
-       map.put("device", resultMap.get("device.deviceType"));
-       //操作系统
-       map.put("os", resultMap.get("os.name") + " " + resultMap.getOrDefault("os.version", ""));
-       //浏览器类型
-       map.put("client", resultMap.get("client.name"));
-       return map;
-   }
+    public Map<String, String> getClientInfo(String userAgent) {
+        Map<String, String> map = new HashMap<>();
+        DeviceDetectorResult result = parser.parse(userAgent);
+        Map<String, String> resultMap = result.toMap();
+        //设备类型
+        map.put("device", resultMap.get("device.deviceType"));
+        //操作系统
+        map.put("os", resultMap.get("os.name") + " " + resultMap.getOrDefault("os.version", ""));
+        //浏览器类型
+        map.put("client", resultMap.get("client.name"));
+        return map;
+    }
 }

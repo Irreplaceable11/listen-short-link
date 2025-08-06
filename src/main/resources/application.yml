@@ -1,4 +1,6 @@
 quarkus:
+  test:
+    continuous-testing: disabled
   live-reload:
     instrumentation: true
   http:
@@ -8,7 +10,7 @@ quarkus:
   #     把404继续传递
   rest:
     resume-on404: true
-#    quinoa:
+  #    quinoa:
 #    dev-server: false
 #    build-dir: dist
 #    ui-root-path: "quinoa"
@@ -30,13 +32,24 @@ quarkus:
   datasource:
     username: hanford
     password: 9632147890aA
+
     jdbc:
       url: jdbc:mysql://113.45.143.70:3306/short_link?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
       driver: com.mysql.cj.jdbc.Driver
-
+  log:
+    level: INFO
+    category:
+      "com.deevvi.device.detector.engine.loader.Loader":
+        level: error
 snowflake:
   worker-id: 1
   datacenter-id: 1
+short-link:
+  segment:
+    initial-value: 100000
+    step: 1000
+    prefetch-threshold: 100
+
 smallrye:
   jwt:
     sign:

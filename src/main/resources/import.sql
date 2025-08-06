@@ -24,7 +24,7 @@ CREATE TABLE users
     id               BIGINT PRIMARY KEY AUTO_INCREMENT,
     username         VARCHAR(50)  NOT NULL UNIQUE,
     email            VARCHAR(100) NOT NULL UNIQUE,
-    password    VARCHAR(255) NOT NULL,
+    password         VARCHAR(255) NOT NULL,
     api_key          VARCHAR(64) UNIQUE COMMENT 'API密钥',
     quota_daily      INT      DEFAULT 1000 COMMENT '每日配额',
     quota_used_today INT      DEFAULT 0 COMMENT '今日已用配额',
@@ -51,4 +51,19 @@ CREATE TABLE click_statistics
     INDEX idx_short_code_time (short_code, click_time),
     INDEX idx_click_time (click_time)
 );
+
+-- 号段分配表
+CREATE TABLE id_segment
+(
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    biz_type    VARCHAR(50) NOT NULL COMMENT '业务类型',
+    current_max BIGINT      NOT NULL DEFAULT 0 COMMENT '当前最大值',
+    step        INT         NOT NULL DEFAULT 1000 COMMENT '步长',
+    update_time DATETIME            DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_biz_type (biz_type)
+);
+
+-- 初始化数据
+INSERT INTO id_segment (biz_type, current_max, step)
+VALUES ('short_link', 100000, 1000);
 
