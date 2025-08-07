@@ -15,36 +15,35 @@ import java.util.Optional;
 import java.util.Set;
 
 @ApplicationScoped
-@Transactional
 public class UserService {
 
     public String authenticate(UserLoginRequest userLoginRequest) {
-        Optional<User> userOptional = User.find("username", userLoginRequest.getUsername()).firstResultOptional();
-        if (userOptional.isEmpty()) {
-            throw new ServiceException("user not found");
-        }
-        User user = userOptional.get();
-        if (!BcryptUtil.matches(userLoginRequest.getPassword(), user.password)) {
-            throw new ServiceException("username or password incorrect");
-        }
-        return Jwt.subject(user.username)
-                .groups(Set.of("user")) // 可选：设置用户角色
-                .expiresIn(Duration.ofHours(1)) // 有效期 1 小时
-                .sign();// 使用配置的私钥签名
-
+//        Optional<User> userOptional = User.find("username", userLoginRequest.getUsername()).firstResultOptional();
+//        if (userOptional.isEmpty()) {
+//            throw new ServiceException("user not found");
+//        }
+//        User user = userOptional.get();
+//        if (!BcryptUtil.matches(userLoginRequest.getPassword(), user.password)) {
+//            throw new ServiceException("username or password incorrect");
+//        }
+//        return Jwt.subject(user.username)
+//                .groups(Set.of("user")) // 可选：设置用户角色
+//                .expiresIn(Duration.ofHours(1)) // 有效期 1 小时
+//                .sign();// 使用配置的私钥签名
+        return "";
     }
 
-
+    @Transactional
     public void register(CreateUserRequest request) {
-        Optional<User> userOptional = User.find("email", request.getEmail()).firstResultOptional();
-        if (userOptional.isPresent()) {
-            throw new ServiceException("email already exists");
-        }
-        User user = new User();
-        user.email = request.getEmail();
-        user.password = BcryptUtil.bcryptHash(request.getPassword());
-        user.username = request.getUsername();
-        user.status = StatusEnum.NORMAL.value();
-        user.persistAndFlush();
+//        Optional<User> userOptional = User.find("email", request.getEmail()).firstResultOptional();
+//        if (userOptional.isPresent()) {
+//            throw new ServiceException("email already exists");
+//        }
+//        User user = new User();
+//        user.email = request.getEmail();
+//        user.password = BcryptUtil.bcryptHash(request.getPassword());
+//        user.username = request.getUsername();
+//        user.status = StatusEnum.NORMAL.value();
+//        user.persistAndFlush();
     }
 }

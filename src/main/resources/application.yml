@@ -22,9 +22,9 @@ quarkus:
   hibernate-orm:
     physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
     log:
-      sql: true
+      sql: false
 #      打印带参数的sql
-      bind-parameters: true
+      bind-parameters: false
     database:
       generation: none
     validate-in-dev-mode: false
@@ -32,10 +32,9 @@ quarkus:
   datasource:
     username: hanford
     password: 9632147890aA
-
-    jdbc:
-      url: jdbc:mysql://113.45.143.70:3306/short_link?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
-      driver: com.mysql.cj.jdbc.Driver
+    reactive:
+      url: mysql://113.45.143.70:3306/short_link?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+    db-kind: mysql
   log:
     level: INFO
     category:

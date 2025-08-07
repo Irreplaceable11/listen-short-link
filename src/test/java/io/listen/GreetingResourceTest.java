@@ -9,7 +9,11 @@ import com.maxmind.geoip2.model.CityResponse;
 import io.listen.generator.ShortCodeGenerator;
 import io.listen.generator.SnowflakeIdGenerator;
 import io.listen.model.UrlMapping;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
+import io.quarkus.logging.Log;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.vertx.RunOnVertxContext;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
@@ -36,13 +40,17 @@ class GreetingResourceTest {
     }
 
     @Test
+    @RunOnVertxContext
     void testShortCode() {
-        System.out.println(shortCodeGenerator.generateShortCode());
+        shortCodeGenerator.generateShortCode()
+                .subscribe()
+                .with(System.out::println,
+                        System.out::println);
     }
 
     @Test
     void testQueryOriginalUrl() {
-        System.out.println(UrlMapping.findOriginalUrlByShortCode("qqq"));
+        System.out.println(UrlMapping.findOriginalUrlByShortCode("qqq").await().indefinitely());
     }
 
 //    @Test

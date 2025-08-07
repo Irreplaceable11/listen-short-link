@@ -40,17 +40,17 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
         if (apiKey == null) {
             return delegate.authenticate(context, identityProviderManager);
         }
-        return Uni.createFrom().<Optional<User>>item(() -> User.find("apiKey = ?1 and status = 1", apiKey).firstResultOptional())
-                .map(Unchecked.function(userOptional -> {
-                    if (userOptional.isPresent()) {
-                        User user = userOptional.get();
-                        return (SecurityIdentity) QuarkusSecurityIdentity.builder()
-                                .setPrincipal(new QuarkusPrincipal("user"))
-                                .addRole(user.role)
-                                .build();
+        return User.find("apiKey = ?1 and status = 1")
+                .<User>firstResult()
+                .flatMap(user -> {
+                    if (user == null) {
+                        return Uni.createFrom().failure(new ServiceException("Invalid API Key"));
                     }
-                    throw new ServiceException("Invalid API Key");
-                })).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+                    return Uni.createFrom().item(QuarkusSecurityIdentity.builder()
+                            .setPrincipal(new QuarkusPrincipal(user.id.toString()))
+                            .addRole(user.role)
+                            .build());
+                });
     }
 
 

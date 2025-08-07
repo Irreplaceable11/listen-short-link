@@ -1,13 +1,12 @@
 package io.listen.resource;
 
-import io.listen.config.SnowflakeConfig;
 import io.listen.generator.ShortCodeGenerator;
-import io.listen.generator.SnowflakeIdGenerator;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 
-@Path("")
+@Path("/test")
 public class TestResource {
 
     @Inject
@@ -15,7 +14,7 @@ public class TestResource {
 
     @GET
     @Path("/id")
-    public String test() {
+    public Uni<String> test() {
         return shortCodeGenerator.generateShortCode(); //TODO replace this stub to something useful
     }
 }

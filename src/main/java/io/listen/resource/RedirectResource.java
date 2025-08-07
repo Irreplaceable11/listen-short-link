@@ -7,6 +7,7 @@ import io.smallrye.mutiny.Uni;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 
@@ -19,17 +20,20 @@ public class RedirectResource {
     @Inject
     RoutingContext routingContext;
 
-    @GET
+    @POST
     @Path("/{shortCode}")
-    public void redirect(@PathParam("shortCode") String shortCode) {
-        String originalUrl = urlMappingService.getOriginalUrl(shortCode).await().indefinitely();
-        // 异步执行但不等待结果 (fire-and-forget)
-        urlMappingService.recordClick(shortCode, routingContext.request())
-                .subscribe().with(
-                        result -> {}, // 成功时什么都不做
-                        failure -> Log.error("Failed to record click", failure)
-                );
-        routingContext.redirect(originalUrl);
-
+    public Uni<Void> redirect(@PathParam("shortCode") String shortCode) {
+        return urlMappingService.getOriginalUrl(shortCode)
+                .flatMap(url -> {
+                    routingContext.redirect(url);
+                    return urlMappingService.recordClick(shortCode, routingContext.request());
+                })
+                .onFailure().invoke(failure -> {
+                    // 记录失败日志
+                    Log.error("Failed to process redirect or record click", failure);
+                    routingContext.response()
+                            .setStatusCode(500)
+                            .end("Internal Server Error");
+                });
     }
 }

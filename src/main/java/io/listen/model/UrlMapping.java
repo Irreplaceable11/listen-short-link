@@ -1,7 +1,8 @@
 package io.listen.model;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
+import io.smallrye.mutiny.Uni;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -47,7 +48,8 @@ public class UrlMapping extends PanacheEntityBase {
   // 更新时间，默认为当前时间戳，并在更新时自动更新
   public LocalDateTime updatedTime;
 
-  public static String findOriginalUrlByShortCode(String shortCode) {
+  @WithSession
+  public static Uni<String> findOriginalUrlByShortCode(String shortCode) {
     return find("select originalUrl from UrlMapping where shortCode = ?1", shortCode).project(String.class).firstResult();
   }
 }
