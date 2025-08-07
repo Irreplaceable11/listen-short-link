@@ -70,7 +70,7 @@ public class ShortCodeGenerator{
     /**
      * 确保已初始化 - 懒初始化模式
      */
-    private Uni<Void> ensureInitialized() {
+    public Uni<Void> ensureInitialized() {
         if (initialized) {
             return Uni.createFrom().voidItem();
         }
