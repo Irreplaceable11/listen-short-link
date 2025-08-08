@@ -4,25 +4,17 @@ import io.listen.config.SegmentConfig;
 import io.listen.model.Segment;
 import io.listen.utils.JsonUtils;
 import io.quarkus.logging.Log;
-import io.quarkus.runtime.Startup;
-import io.quarkus.runtime.StartupEvent;
-import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.smallrye.mutiny.unchecked.Unchecked;
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 @ApplicationScoped
-public class ShortCodeGenerator{
+public class ShortCodeGenerator {
 
     private static final String BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final int BASE = BASE62_CHARS.length();
@@ -59,13 +51,11 @@ public class ShortCodeGenerator{
 
     private final Object initLock = new Object();
 
-
     @PostConstruct
     public void init() {
         Log.info("Init ShortCodeGenerator");
         idObfuscator = new IdObfuscator(PRIME, MOD);
     }
-
 
     /**
      * 确保已初始化 - 懒初始化模式
@@ -99,34 +89,6 @@ public class ShortCodeGenerator{
                 .invoke(e -> Log.error("Failed to initialize segment", e));
     }
 
-
-//    @PostConstruct
-//    public void init() {
-//        Log.info("Init ShortCodeGenerator");
-//        idObfuscator = new IdObfuscator(PRIME, MOD);
-//        // 只初始化非响应式组件
-//
-//        //初始化业务类型
-//        segmentAllocator.initBizTypeIfNotExists(BIZ_TYPE, segmentConfig.initialValue(), segmentConfig.step())
-//                .flatMap(ignored -> segmentAllocator.getNextSegment(BIZ_TYPE))
-//                .invoke(segment -> {
-//                    synchronized (this) {
-//                        currentSegment.set(segment);
-//                        currentId.set(segment.start);
-//                        Log.infof("Initialized with segment: %s", JsonUtils.toJson(currentSegment));
-//                    }
-//                })
-//                .onFailure()
-//                .invoke(e -> Log.error("Failed to initialize segment", e))
-//                .subscribe()
-//                .with(
-//                        result -> {},
-//                        Unchecked.consumer(failure -> {
-//                            throw new RuntimeException("Failed to initialize ShortCodeGenerator", failure);
-//                        })
-//                );
-//    }
-
     /**
      * 生成短码
      */
@@ -153,13 +115,8 @@ public class ShortCodeGenerator{
                         // 检查是否需要预取下一个号段
                         long remaining = current.end - id;
                         if (remaining <= segmentConfig.prefetchThreshold()) {
-                            // 异步预取，不阻塞当前请求
-                            asyncPrefetchNextSegment()
-                                    .subscribe()
-                                    .with(
-                                            segment -> Log.infof("Background prefetch completed: %s", segment),
-                                            failure -> Log.error("Background prefetch failed", failure)
-                                    );
+                            // 触发异步预取，但不等待结果
+                            triggerAsyncPrefetch();
                         }
                         return id;
                     } else {
@@ -178,6 +135,40 @@ public class ShortCodeGenerator{
                 });
     }
 
+    /**
+     * 触发异步预取（不等待结果）
+     */
+    private void triggerAsyncPrefetch() {
+        // 检查是否已经有预取的号段或正在预取
+        if (nextSegment.get() != null || prefetchingUni.get() != null) {
+            return;
+        }
+
+        // 创建预取操作
+        Uni<Segment> prefetchOperation = segmentAllocator.getNextSegment(BIZ_TYPE)
+                .invoke(segment -> {
+                    nextSegment.set(segment);
+                    Log.infof("Successfully prefetched next segment: %s", JsonUtils.toJson(segment));
+                })
+                .onTermination()
+                .invoke(() -> prefetchingUni.set(null))
+                .onFailure()
+                .invoke(failure -> {
+                    Log.error("Failed to prefetch next segment", failure);
+                    nextSegment.set(null);
+                })
+                // 重要：使用 memoize() 确保操作只执行一次
+                .memoize().indefinitely();
+
+        // 尝试设置预取操作
+        if (prefetchingUni.compareAndSet(null, prefetchOperation)) {
+            // 触发执行但不等待结果
+            prefetchOperation.subscribe().with(
+                    segment -> {}, // 成功时已经在 invoke 中处理
+                    failure -> {}  // 失败时已经在 onFailure 中处理
+            );
+        }
+    }
 
     /**
      * 异步切换到下一个号段
@@ -194,27 +185,45 @@ public class ShortCodeGenerator{
         Uni<Void> switchingOperation = Uni.createFrom().item(() -> {
                     // 双重检查，确保还需要切换
                     Segment current = currentSegment.get();
-                    if (currentId.get() <= current.end) {
+                    long currentIdValue = currentId.get();
+                    if (current != null && currentIdValue <= current.end) {
                         return null; // 不需要切换了
                     }
 
                     // 尝试使用预取的号段
-                    return nextSegment.getAndSet(null);
+                    Segment prefetched = nextSegment.getAndSet(null);
+
+                    // 同时清除预取操作状态
+                    prefetchingUni.set(null);
+
+                    return prefetched;
                 })
                 .flatMap(next -> {
                     if (next != null) {
                         // 使用预取的号段
                         return Uni.createFrom().item(next)
-                                .invoke(segment -> Log.infof("Using prefetched segment: %s", segment));
+                                .invoke(segment -> Log.infof("Using prefetched segment: %s", JsonUtils.toJson(segment)));
                     } else {
-                        // 没有预取的号段，立即获取新号段
-                        return segmentAllocator.getNextSegment(BIZ_TYPE)
-                                .invoke(segment -> Log.infof("Allocated new segment on demand: %s", segment));
+                        // 检查是否有正在进行的预取操作
+                        Uni<Segment> ongoingPrefetch = prefetchingUni.get();
+                        if (ongoingPrefetch != null) {
+                            // 等待正在进行的预取完成
+                            return ongoingPrefetch
+                                    .onItem().ifNull().switchTo(() ->
+                                            // 如果预取失败，重新获取
+                                            segmentAllocator.getNextSegment(BIZ_TYPE)
+                                    );
+                        } else {
+                            // 没有预取的号段，立即获取新号段
+                            return segmentAllocator.getNextSegment(BIZ_TYPE)
+                                    .invoke(segment -> Log.infof("Allocated new segment on demand: %s", JsonUtils.toJson(segment)));
+                        }
                     }
                 })
                 .invoke(newSegment -> {
                     currentSegment.set(newSegment);
                     currentId.set(newSegment.start);
+                    Log.infof("Switched to new segment: start=%d, end=%d", newSegment.start, newSegment.end);
                 })
                 .replaceWithVoid()
                 .onTermination()
@@ -222,7 +231,9 @@ public class ShortCodeGenerator{
                 .onFailure()
                 .invoke(e -> Log.error("Failed to switch segment", e))
                 .onFailure()
-                .transform(e -> new RuntimeException("Failed to switch to next segment", e));
+                .transform(e -> new RuntimeException("Failed to switch to next segment", e))
+                // 使用 memoize 确保同一个切换操作只执行一次
+                .memoize().indefinitely();
 
         // 尝试设置切换操作
         if (switchingUni.compareAndSet(null, switchingOperation)) {
@@ -234,70 +245,14 @@ public class ShortCodeGenerator{
     }
 
     /**
-     * 异步预取下一个号段
+     * Base62编码（固定长度）
      */
-     private Uni<Segment> asyncPrefetchNextSegment() {
-        // 检查是否已经有预取操作在进行或已完成
-        if (nextSegment.get() != null) {
-            return Uni.createFrom().item(nextSegment.get());
-        }
-
-        Uni<Segment> existingPrefetch = prefetchingUni.get();
-        if (existingPrefetch != null) {
-            return existingPrefetch;
-        }
-
-        // 创建新的预取操作
-        Uni<Segment> prefetchOperation = segmentAllocator.getNextSegment(BIZ_TYPE)
-                .invoke(segment -> {
-                    nextSegment.set(segment);
-                    Log.infof("Successfully prefetched next segment: %s", segment);
-                })
-                .onTermination()
-                .invoke(() -> prefetchingUni.set(null)) // 清除预取状态
-                .onFailure()
-                .invoke(failure -> {
-                    Log.error("Failed to prefetch next segment", failure);
-                    nextSegment.set(null); // 确保失败时清除状态
-                })
-                .runSubscriptionOn(Infrastructure.getDefaultExecutor());
-
-        // 尝试设置预取操作
-        if (prefetchingUni.compareAndSet(null, prefetchOperation)) {
-            return prefetchOperation;
-        } else {
-            // 其他线程已经开始预取，返回其结果
-            return prefetchingUni.get();
-        }
-    }
-
-    /**
-     * Base62编码
-     */
-    private String encode(long num) {
-        if (num == 0) {
-            return String.valueOf(BASE62_CHARS.charAt(0));
-        }
-
-        StringBuilder sb = new StringBuilder();
-        while (num > 0) {
-            sb.append(BASE62_CHARS.charAt((int) (num % BASE)));
-            num /= BASE;
-        }
-
-        return sb.reverse().toString();
-    }
-
     private String encodeFixedLength(long num) {
         StringBuilder sb = new StringBuilder();
-        while (num > 0) {
+        for (int i = 0; i < CODE_LENGTH; i++) {
             sb.append(BASE62_CHARS.charAt((int) (num % BASE)));
             num /= BASE;
         }
-        while (sb.length() < ShortCodeGenerator.CODE_LENGTH) {
-            sb.append(BASE62_CHARS.charAt((int) (Math.random() * BASE)));
-        }
         return sb.reverse().toString();
     }
-
 }

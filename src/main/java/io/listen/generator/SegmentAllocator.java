@@ -39,6 +39,7 @@ public class SegmentAllocator {
     /**
      * 初始化业务类型（如果不存在）
      */
+    @WithTransaction
     public Uni<Void> initBizTypeIfNotExists(String bizType, long initialValue, int step) {
         return Panache.withTransaction(() ->
                 Segment.count("bizType", bizType)

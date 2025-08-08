@@ -2,14 +2,13 @@ package io.listen.resource;
 
 import io.listen.service.UrlMappingService;
 import io.quarkus.logging.Log;
-import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.core.UriInfo;
 
 @Path("/")
 public class RedirectResource {
@@ -20,9 +19,9 @@ public class RedirectResource {
     @Inject
     RoutingContext routingContext;
 
-    @POST
-    @Path("/{shortCode}")
-    public Uni<Void> redirect(@PathParam("shortCode") String shortCode) {
+    @GET
+    @Path("/{shortCode: [a-zA-Z0-9]{6,8}}")
+    public Uni<Void> redirect(@PathParam("shortCode") String shortCode, UriInfo uriInfo) {
         return urlMappingService.getOriginalUrl(shortCode)
                 .flatMap(url -> {
                     routingContext.redirect(url);
