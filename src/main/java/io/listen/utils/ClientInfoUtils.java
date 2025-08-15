@@ -41,8 +41,8 @@ public class ClientInfoUtils {
                 Log.error(e.getMessage(), e);
             }
             return null;
-        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
-          .subscribe().with(success -> {});
+        })
+          .subscribe().with(success -> Log.info("Successfully initialized ClientInfoUtils"));
     }
 
     @PreDestroy

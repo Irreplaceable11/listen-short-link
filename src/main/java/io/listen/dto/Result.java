@@ -26,6 +26,11 @@ public class Result<T> {
         return new Result<>(true, ResponseStatusEnum.OK.code(), ResponseStatusEnum.OK.message(), data);
     }
 
+    // 成功响应
+    public static Result<Void> success() {
+        return new Result<>(true, ResponseStatusEnum.OK.code(), ResponseStatusEnum.OK.message(), null);
+    }
+
     public static <T> Result<T> success(T data, String message) {
         return new Result<>(true, ResponseStatusEnum.OK.code(), message, data);
     }

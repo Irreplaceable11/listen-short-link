@@ -4,6 +4,8 @@ import io.listen.dto.Result;
 import io.listen.dto.request.CreateUserRequest;
 import io.listen.dto.request.UserLoginRequest;
 import io.listen.service.UserService;
+import io.quarkus.security.PermissionsAllowed;
+import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -24,16 +26,17 @@ public class UserResource {
     @POST
     @Path("/login")
     @PermitAll
-    public Result<String> login(@Valid UserLoginRequest userLoginRequest) {
-        return Result.success(userService.authenticate(userLoginRequest));
+    public Uni<Result<String>> login(@Valid UserLoginRequest userLoginRequest) {
+        return userService.authenticate(userLoginRequest)
+                .flatMap(val ->Uni.createFrom().item(Result.success(val)));
     }
 
     @POST
     @PermitAll
     @Path("/register")
-    public Result<String> register(@Valid CreateUserRequest request) {
-        userService.register(request);
-        return Result.success(null);
+    public Uni<Result<Void>> register(@Valid CreateUserRequest request) {
+        return userService.register(request)
+                .flatMap(unused ->Uni.createFrom().item(Result.success()));
     }
 
 
