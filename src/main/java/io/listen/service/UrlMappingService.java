@@ -2,6 +2,7 @@ package io.listen.service;
 
 import io.listen.dto.request.CreateShortUrlRequest;
 import io.listen.enums.StatusEnum;
+import io.listen.exception.ServiceException;
 import io.listen.generator.ShortCodeGenerator;
 import io.listen.model.ClickStatistic;
 import io.listen.model.UrlMapping;
@@ -32,6 +33,9 @@ public class UrlMappingService {
     @Inject
     ClientInfoUtils clientInfoUtils;
 
+    @Inject
+    UserService userService;
+
 
     @Inject
     @CacheName("short-link")
@@ -41,32 +45,34 @@ public class UrlMappingService {
     UriInfo uriInfo;
 
     public Uni<UrlMapping> createShortUrl(CreateShortUrlRequest createShortUrlRequest) {
-        return UrlMapping.count("originalUrl = ?1 and userId = ?2", createShortUrlRequest.getOriginalUrl(),
-                createShortUrlRequest.getUserId())
-                .flatMap(count -> {
-                    if (count > 0) {
-                        return Uni.createFrom().failure(new RuntimeException("URL already exists"));
-                    }
-                    return Panache.withTransaction(() -> shortCodeGenerator.generateShortCode()
-                            .flatMap(shortCode -> {
-                                UrlMapping urlMapping = new UrlMapping();
-                                urlMapping.shortCode = shortCode;
-                                urlMapping.originalUrl = createShortUrlRequest.getOriginalUrl();
-                                urlMapping.userId = Long.parseLong(createShortUrlRequest.getUserId());
-                                urlMapping.title = createShortUrlRequest.getTitle();
-                                urlMapping.description = createShortUrlRequest.getDescription();
-                                urlMapping.expireTime = createShortUrlRequest.getExpireTime();
-                                urlMapping.status = StatusEnum.NORMAL.value();
-                                urlMapping.domain = uriInfo.getBaseUri().toString() + shortCode;
-                                return urlMapping.<UrlMapping>persist()
-                                        .invoke(res -> {
-                                            cache.as(CaffeineCache.class).put(shortCode, CompletableFuture.completedFuture(res.originalUrl));
-                                        });
-                            }));
-                })
-                .onFailure()
-                .invoke(e -> Log.errorf("Failed to create short URL: %s", e.getMessage()));
+        return Panache.withTransaction(() ->
+                userService.consumeQuota()
+                        .flatMap(quotaResult -> {
+                            if (quotaResult == 0) {
+                                return Uni.createFrom().failure(new ServiceException("配额不足，无法创建短链"));
+                            }
+                            return shortCodeGenerator.generateShortCode()
+                                    .flatMap(shortCode -> {
+                                        UrlMapping urlMapping = new UrlMapping();
+                                        urlMapping.shortCode = shortCode;
+                                        urlMapping.originalUrl = createShortUrlRequest.getOriginalUrl();
+                                        urlMapping.userId = Long.parseLong(createShortUrlRequest.getUserId());
+                                        urlMapping.title = createShortUrlRequest.getTitle();
+                                        urlMapping.description = createShortUrlRequest.getDescription();
+                                        urlMapping.expireTime = createShortUrlRequest.getExpireTime();
+                                        urlMapping.status = StatusEnum.NORMAL.value();
+                                        urlMapping.domain = uriInfo.getBaseUri().toString() + shortCode;
+                                        return urlMapping.<UrlMapping>persist()
+                                                .map(res -> {
+                                                    cache.as(CaffeineCache.class).put(shortCode,
+                                                            CompletableFuture.completedFuture(res.originalUrl));
+                                                    return res;
+                                                });
+                                    });
+                        })
+        ).onFailure().invoke(e -> Log.errorf("Failed to create short URL: %s", e.getMessage()));
     }
+
     @WithTransaction
     public Uni<Void> recordClick(String shortCode, HttpServerRequest request) {
         // 第一步：更新 clickCount

@@ -38,11 +38,11 @@ public class User extends PanacheEntityBase {
 
   // 每日配额，默认1000
   //限制用户每天可以创建的短链数量
-  public Integer quotaDaily;
+  public Integer quota;
 
   // 今日已用配额，默认0
   // 记录用户当天已经使用的配额数量
-  public Integer quotaUsedToday;
+  public Integer quotaUsed;
 
   // 配额重置日期
   public LocalDate quotaResetDate;

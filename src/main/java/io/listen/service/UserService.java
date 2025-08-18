@@ -6,10 +6,13 @@ import io.listen.enums.StatusEnum;
 import io.listen.exception.ServiceException;
 import io.listen.model.User;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.jwt.build.Jwt;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 
 import java.time.Duration;
@@ -17,6 +20,9 @@ import java.util.Set;
 
 @ApplicationScoped
 public class UserService {
+
+    @Inject
+    SecurityIdentity identity;
 
     @WithTransaction
     public Uni<String> authenticate(UserLoginRequest userLoginRequest) {
@@ -50,4 +56,21 @@ public class UserService {
                     return user.persistAndFlush().replaceWithVoid();
                 });
     }
+
+    @WithTransaction
+    public Uni<Boolean> checkQuota() {
+        String id = identity.getPrincipal().getName();
+        return User.find("id = ?1", id)
+                .<User>singleResult()
+                .map(user -> {
+                    int remainingQuota = user.quota - (user.quotaUsed != null ? user.quotaUsed : 0);
+                    return remainingQuota > 0;
+                });
+    }
+
+    public Uni<Integer> consumeQuota() {
+        String id = identity.getPrincipal().getName();
+        return User.update("quota = quota - 1 where id = ?1 and quota > 0", id);
+    }
+
 }
