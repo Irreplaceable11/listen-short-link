@@ -33,6 +33,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: target/*-runner.jar
           target: /www/wwwroot/quarkus/
+          strip_components: 1
       # 5. 部署到服务器
       # 在服务器上执行启动命令
       - name: Restart app
@@ -44,10 +45,15 @@ jobs:
           script: |
             APP_NAME=listen-short-link-1.0.0-SNAPSHOT-runner.jar
             APP_DIR=/www/wwwroot/quarkus/
-            JAVA_HOME=/www/server/java/jdk-21.0.2/bin/
+            JAVA_HOME=/www/server/java/jdk-21.0.2/bin/java
+            
+            # 如果文件在 target 下就移动
+            if [ -f $APP_DIR/target/$APP_NAME ]; then
+              mv $APP_DIR/target/$APP_NAME $APP_DIR/$APP_NAME
+            fi
 
             # 杀掉旧进程
             pgrep -f $APP_NAME | xargs -r kill -9
 
             # 后台启动
-            nohup $JAVA_HOME ./java -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 &
+            nohup $JAVA_HOME -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 &
