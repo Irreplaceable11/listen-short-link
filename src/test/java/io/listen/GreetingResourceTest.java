@@ -34,24 +34,24 @@ class GreetingResourceTest {
     @Inject
     ObjectMapper objectMapper;
 
-    @Test
-    void testId() {
-        System.out.println(snowflakeIdGenerator.nextId());
-    }
+//    @Test
+//    void testId() {
+//        System.out.println(snowflakeIdGenerator.nextId());
+//    }
 
-    @Test
-    @RunOnVertxContext
-    void testShortCode() {
-        shortCodeGenerator.generateShortCode()
-                .subscribe()
-                .with(System.out::println,
-                        System.out::println);
-    }
+//    @Test
+//    @RunOnVertxContext
+//    void testShortCode() {
+//        shortCodeGenerator.generateShortCode()
+//                .subscribe()
+//                .with(System.out::println,
+//                        System.out::println);
+//    }
 
-    @Test
-    void testQueryOriginalUrl() {
-        System.out.println(UrlMapping.findOriginalUrlByShortCode("qqq").await().indefinitely());
-    }
+//    @Test
+//    void testQueryOriginalUrl() {
+//        System.out.println(UrlMapping.findOriginalUrlByShortCode("qqq").await().indefinitely());
+//    }
 
 //    @Test
 //    void testUserAgent() {

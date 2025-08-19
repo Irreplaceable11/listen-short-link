@@ -16,6 +16,7 @@ import jakarta.inject.Singleton;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -30,20 +31,21 @@ public class ClientInfoUtils {
 
     DatabaseReader dbReader = null;
 
-    @PostConstruct
-    public void init() {
-        Uni.createFrom().<Void>item(() -> {
-            try {
-                String dbFileName = "GeoLite2-City.mmdb";
-                parser = DeviceDetectorParser.getClient();
-                dbReader = new DatabaseReader.Builder(new File(getClass().getClassLoader().getResource(dbFileName).toURI())).build();
-            } catch (IOException | URISyntaxException e) {
-                Log.error(e.getMessage(), e);
-            }
-            return null;
-        })
-          .subscribe().with(success -> Log.info("Successfully initialized ClientInfoUtils"));
-    }
+        @PostConstruct
+        public void init() {
+            Uni.createFrom().<Void>item(() -> {
+                try {
+                    String dbFileName = "GeoLite2-City.mmdb";
+                    InputStream inputStream = getClass().getClassLoader().getResourceAsStream(dbFileName);
+                    parser = DeviceDetectorParser.getClient();
+                    dbReader = new DatabaseReader.Builder(inputStream).build();
+                } catch (IOException e) {
+                    Log.error(e.getMessage(), e);
+                }
+                return null;
+            })
+              .subscribe().with(success -> Log.info("Successfully initialized ClientInfoUtils"));
+        }
 
     @PreDestroy
     public void destroy() {

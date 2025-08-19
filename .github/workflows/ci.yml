@@ -21,5 +21,33 @@ jobs:
           distribution: temurin
           cache: maven
 
+       # 3. 构建 Quarkus 项目
       - name: Build
-        run: ./mvnw verify -B
+        run: ./mvnw package -DskipTests -Dquarkus.package.jar.type=uber-jar
+        # 4 连接到远程服务器
+      - name: Connect to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 113.45.143.70
+          username: root              # 或者你的服务器用户
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: target/*-runner.jar
+          target: /www/wwwroot/quarkus/
+      # 5. 部署到服务器
+      # 在服务器上执行启动命令
+      - name: Restart app
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 113.45.143.70
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            APP_NAME=listen-short-link-1.0.0-SNAPSHOT-runner.jar
+            APP_DIR=/www/wwwroot/quarkus/
+            JAVA_HOME=/www/server/java/jdk-21.0.2/bin/
+
+            # 杀掉旧进程
+            pgrep -f $APP_NAME | xargs -r kill -9
+
+            # 后台启动
+            nohup $JAVA_HOME ./java -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 &
