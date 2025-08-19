@@ -56,4 +56,4 @@ jobs:
             pgrep -f $APP_NAME | xargs -r kill -9
 
             # 后台启动
-            nohup $JAVA_HOME -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 &
+            nohup $JAVA_HOME -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 & disown
