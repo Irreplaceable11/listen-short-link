@@ -14,6 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 2. 安装 ccache
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      # 3. 配置 ccache 缓存
+      - name: Setup ccache cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-        
+      # 4. 安装 GraalVM（支持 native）
       - name: Set up JDK 21
         uses: graalvm/setup-graalvm@v1
         with:
@@ -21,27 +34,34 @@ jobs:
           distribution: graalvm
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: maven
+      # 5. 设置环境变量让 GraalVM 使用 ccache
+      - name: Configure ccache env
+        run: |
+          echo "CCACHE_DIR=$HOME/.ccache" >> $GITHUB_ENV
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
 
-       # 3. 构建 Quarkus 项目
+       # 6. 构建 Quarkus 项目
       - name: Build
-        run: ./mvnw package -DskipTests -Pnative
-        # 4 连接到远程服务器
+        run: ./mvnw package -Pnative -DskipTests
+        # 7 连接到远程服务器
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 113.45.143.70
-          username: root              # 或者你的服务器用户
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}              # 或者你的服务器用户
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: target/listen-short-link-1.0.0-SNAPSHOT-runner
           target: /www/wwwroot/quarkus/
           strip_components: 1
-      # 5. 部署到服务器
+      # 8. 部署到服务器
       # 在服务器上执行启动命令
       - name: Restart app
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 113.45.143.70
-          username: root
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             systemctl daemon-reload

@@ -96,7 +96,7 @@ public class ClientInfoUtils {
     public Map<String, String> getClientInfo(String userAgent) {
         Map<String, String> map = new HashMap<>();
         DeviceDetectorResult result = parser.parse(userAgent);
-        //test native
+        //test native with cache
         Map<String, String> resultMap = result.toMap();
         //设备类型
         map.put("device", resultMap.get("device.deviceType"));
