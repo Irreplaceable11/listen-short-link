@@ -15,23 +15,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: graalvm/setup-graalvm@v1
         with:
           java-version: 21
-          distribution: temurin
+          distribution: graalvm
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: maven
 
        # 3. 构建 Quarkus 项目
       - name: Build
-        run: ./mvnw package -DskipTests -Dquarkus.package.jar.type=uber-jar
+        run: ./mvnw package -DskipTests -Pnative
         # 4 连接到远程服务器
-      - name: Connect to server
+      - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 113.45.143.70
           username: root              # 或者你的服务器用户
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: target/*-runner.jar
+          source: target/listen-short-link-1.0.0-SNAPSHOT-runner
           target: /www/wwwroot/quarkus/
           strip_components: 1
       # 5. 部署到服务器
@@ -43,17 +44,6 @@ jobs:
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            APP_NAME=listen-short-link-1.0.0-SNAPSHOT-runner.jar
-            APP_DIR=/www/wwwroot/quarkus/
-            JAVA_HOME=/www/server/java/jdk-21.0.2/bin/java
-            
-            # 如果文件在 target 下就移动
-            if [ -f $APP_DIR/target/$APP_NAME ]; then
-              mv $APP_DIR/target/$APP_NAME $APP_DIR/$APP_NAME
-            fi
-
-            # 杀掉旧进程
-            pgrep -f $APP_NAME | xargs -r kill -9
-
-            # 后台启动
-            nohup $JAVA_HOME -jar $APP_DIR/$APP_NAME > $APP_DIR/app.log 2>&1 & disown
+            systemctl daemon-reload
+            systemctl restart shortlink
+            systemctl status shortlink --no-pager -l
