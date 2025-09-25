@@ -31,21 +31,21 @@ public class ClientInfoUtils {
 
     DatabaseReader dbReader = null;
 
-        @PostConstruct
-        public void init() {
-            Uni.createFrom().<Void>item(() -> {
-                try {
-                    String dbFileName = "GeoLite2-City.mmdb";
-                    InputStream inputStream = getClass().getClassLoader().getResourceAsStream(dbFileName);
-                    parser = DeviceDetectorParser.getClient();
-                    dbReader = new DatabaseReader.Builder(inputStream).build();
-                } catch (IOException e) {
-                    Log.error(e.getMessage(), e);
-                }
-                return null;
-            })
-              .subscribe().with(success -> Log.info("Successfully initialized ClientInfoUtils"));
-        }
+    @PostConstruct
+    public void init() {
+        Uni.createFrom().<Void>item(() -> {
+                    try {
+                        String dbFileName = "GeoLite2-City.mmdb";
+                        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(dbFileName);
+                        parser = DeviceDetectorParser.getClient();
+                        dbReader = new DatabaseReader.Builder(inputStream).build();
+                    } catch (IOException e) {
+                        Log.error(e.getMessage(), e);
+                    }
+                    return null;
+                })
+                .subscribe().with(success -> Log.info("Successfully initialized ClientInfoUtils"));
+    }
 
     @PreDestroy
     public void destroy() {

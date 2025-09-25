@@ -13,6 +13,7 @@ public class Segment extends PanacheEntityBase {
 
     public String bizType;
 
+    //设置current_max初始值为100000
     public Long currentMax;
 
     public Integer step;

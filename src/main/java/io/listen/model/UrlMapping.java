@@ -42,6 +42,8 @@ public class UrlMapping extends PanacheEntityBase {
   // 过期时间，NULL表示永不过期
   public LocalDateTime expireTime;
 
+  public Long creator;
+
   // 创建时间，默认为当前时间戳
   public LocalDateTime createdTime;
 

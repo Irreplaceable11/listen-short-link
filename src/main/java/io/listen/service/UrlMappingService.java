@@ -21,6 +21,7 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.UriInfo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,7 +45,7 @@ public class UrlMappingService {
     @Context
     UriInfo uriInfo;
 
-    public Uni<UrlMapping> createShortUrl(CreateShortUrlRequest createShortUrlRequest) {
+    public Uni<UrlMapping> createShortUrl(CreateShortUrlRequest createShortUrlRequest, long userId) {
         return Panache.withTransaction(() ->
                 userService.consumeQuota()
                         .flatMap(quotaResult -> {
@@ -62,6 +63,7 @@ public class UrlMappingService {
                                         urlMapping.expireTime = createShortUrlRequest.getExpireTime();
                                         urlMapping.status = StatusEnum.NORMAL.value();
                                         urlMapping.domain = uriInfo.getBaseUri().toString() + shortCode;
+                                        urlMapping.creator = userId;
                                         return urlMapping.<UrlMapping>persist()
                                                 .map(res -> {
                                                     cache.as(CaffeineCache.class).put(shortCode,
@@ -109,6 +111,11 @@ public class UrlMappingService {
 
     public Uni<String> getOriginalUrl(String shortCode) {
         return cache.as(CaffeineCache.class).getAsync(shortCode, UrlMapping::findOriginalUrlByShortCode);
+    }
+
+
+    public Uni<List<UrlMapping>> list(Long userId) {
+        return UrlMapping.list("creator = ?", userId);
     }
 
 

@@ -16,6 +16,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Set;
 
 @ApplicationScoped
@@ -34,7 +35,7 @@ public class UserService {
                         : Uni.createFrom().failure(new ServiceException("username or password is incorrect")))
                 .map(user -> {
                     return Jwt.subject(String.valueOf(user.id))
-                            .groups(Set.of("user")) // 可选：设置用户角色
+                            .groups(Set.of(user.role)) // 可选：设置用户角色
                             .expiresIn(Duration.ofHours(1)) // 有效期 1 小时
                             .sign();// 使用配置的私钥签名
 
@@ -52,20 +53,18 @@ public class UserService {
                     user.username = request.getUsername();
                     user.password = BcryptUtil.bcryptHash(request.getPassword()); // 加密密码
                     user.status = StatusEnum.NORMAL.value(); // 假设 StatusEnum 已定义
+                    user.role = "user";
+                    user.quota = 50;
+                    user.quotaUsed = 0;
+                    user.quotaResetDate = LocalDate.now().plusDays(30);
                     // 持久化并刷新
                     return user.persistAndFlush().replaceWithVoid();
                 });
     }
 
-    @WithTransaction
-    public Uni<Boolean> checkQuota() {
-        String id = identity.getPrincipal().getName();
-        return User.find("id = ?1", id)
-                .<User>singleResult()
-                .map(user -> {
-                    int remainingQuota = user.quota - (user.quotaUsed != null ? user.quotaUsed : 0);
-                    return remainingQuota > 0;
-                });
+
+    public Uni<User> getUser(String id) {
+        return User.find("id = ?1", id).singleResult();
     }
 
     public Uni<Integer> consumeQuota() {
