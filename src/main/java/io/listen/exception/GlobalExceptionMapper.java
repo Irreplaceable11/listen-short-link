@@ -2,7 +2,9 @@ package io.listen.exception;
 
 import io.listen.dto.Result;
 import io.quarkus.logging.Log;
+import io.quarkus.security.AuthenticationFailedException;
 import io.quarkus.security.UnauthorizedException;
+import jakarta.ws.rs.InternalServerErrorException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -23,9 +25,15 @@ public class GlobalExceptionMapper  {
         return Response.temporaryRedirect(new URI(uriInfo.getBaseUri().toString() + "q/dev-ui/welcome")).build();
     }
 
-    //没有jwt时访问端口触发这个
+    //没有jwt时访问端口触发
     @ServerExceptionMapper
     public Response toResponse(UnauthorizedException e) {
+        return Response.status(200).entity(Result.failure("Authentication failed")).build();
+    }
+
+    //授权失败触发
+    @ServerExceptionMapper
+    public Response toResponse(AuthenticationFailedException e) {
         return Response.status(200).entity(Result.failure("Authentication failed")).build();
     }
 
