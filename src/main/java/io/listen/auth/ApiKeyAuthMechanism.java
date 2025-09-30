@@ -40,7 +40,7 @@ public class ApiKeyAuthMechanism implements HttpAuthenticationMechanism {
         if (apiKey == null) {
             return delegate.authenticate(context, identityProviderManager);
         }
-        return User.find("apiKey = ?1 and status = 1")
+        return User.find("apiKey = ?1 and status = 1", apiKey)
                 .<User>firstResult()
                 .flatMap(user -> {
                     if (user == null) {
